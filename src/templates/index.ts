@@ -1,0 +1,171 @@
+export const transferTemplate = `You are an AI assistant specialized in processing cryptocurrency transfer requests. Your task is to extract specific information from user messages and format it into a structured JSON response.
+
+First, review the recent messages from the conversation:
+
+<recent_messages>
+{{recentMessages}}
+</recent_messages>
+
+Here's a list of supported chains:
+<supported_chains>
+{{supportedChains}}
+</supported_chains>
+
+Your goal is to extract the following information about the requested transfer:
+1. Amount to transfer (in the chain's native units, without the coin symbol)
+2. Recipient address (must be a valid address for the specified chain)
+3. Token symbol or address (if not a native token transfer)
+
+Before providing the final JSON output, show your reasoning process inside <analysis> tags. Follow these steps:
+
+1. Identify the relevant information from the user's message:
+   - Quote the part of the message mentioning the chain.
+   - Quote the part mentioning the amount.
+   - Quote the part mentioning the recipient address.
+   - Quote the part mentioning the token (if any).
+
+2. Validate each piece of information:
+   - **Amount**: Attempt to convert the amount to a number to verify it's valid.
+   - **Address**: 
+     - For TRON: Validate that it is a Base58 address (commonly starting with "T").
+   - **Token**: Note whether it's a native transfer or if a specific token is mentioned.
+
+3. If any information is missing or invalid, prepare an appropriate error message.
+
+4. If all information is valid, summarize your findings.
+
+5. Prepare the JSON structure based on your analysis.
+
+The JSON should follow this structure:
+
+\`\`\`json
+{
+    "amount": string,
+    "toAddress": string,
+    "data": string | null
+}
+\`\`\`
+
+**Validation Details**:
+- **Amount**: Must be a valid numeric string.
+- **Recipient Address**: 
+  - For TRON: Must be a valid Base58 TRON address.
+  - For TON: Must be a valid TON wallet address (e.g., user-friendly or raw format).
+- **Data**: Set to null for native transfers, or include the token symbol/address if specified.
+
+**Example Scenarios**:
+- If the user says "Transfer 100 TRX to TXXXXXXXXX on TRON", the JSON should reflect TRON chain details and set "token" to null.
+
+Now, process the user's request and provide your response.`;
+
+export const bridgeTemplate = `Given the recent messages and wallet information below:
+
+<recent_messages>
+{{recentMessages}}
+</recent_messages>
+
+<wallet_info>
+{{walletInfo}}
+</wallet_info>
+
+Extract the following information about the requested token bridge:
+- Token symbol or address to bridge
+- Source chain
+- Destination chain
+- Amount to bridge: Must be a string representing the amount in the chain's native units (only number without coin symbol, e.g., "0.1")
+- Destination address (if specified)
+
+Respond with a JSON markdown block containing only the extracted values:
+
+\`\`\`json
+{
+    "token": string | null,
+    "fromChain": "ethereum" | "abstract" | "base" | "sepolia" | "bsc" | "arbitrum" | "avalanche" | "polygon" | "optimism" | "cronos" | "gnosis" | "fantom" | "klaytn" | "celo" | "moonbeam" | "aurora" | "harmonyOne" | "moonriver" | "arbitrumNova" | "mantle" | "linea" | "scroll" | "filecoin" | "taiko" | "zksync" | "canto" | "alienx" | "tron" | "ton" | null,
+    "toChain": "ethereum" | "abstract" | "base" | "sepolia" | "bsc" | "arbitrum" | "avalanche" | "polygon" | "optimism" | "cronos" | "gnosis" | "fantom" | "klaytn" | "celo" | "moonbeam" | "aurora" | "harmonyOne" | "moonriver" | "arbitrumNova" | "mantle" | "linea" | "scroll" | "filecoin" | "taiko" | "zksync" | "canto" | "alienx" | "tron" | "ton" | null,
+    "amount": string | null,
+    "toAddress": string | null
+}
+\`\`\`
+
+### Validation Steps:
+1. **Token**: Identify the token symbol or address mentioned by the user. Set to null if no specific token is mentioned.
+2. **Source and Destination Chains**:
+   - Must exactly match one of the supported chains listed above.
+   - If the chain is not explicitly stated, infer it based on wallet information or previous context in the conversation.
+3. **Amount**:
+   - Ensure it is a valid numeric string without any symbols or extra characters.
+   - If not provided, set to null.
+4. **Destination Address**:
+   - Validate based on the destination chain:
+     - **TRON**: Must be a valid Base58 address starting with "T".
+     - **TON**: Must be a valid TON wallet address (user-friendly or raw format).
+     - **Other Chains**: Must be a valid Ethereum-style address (starting with "0x").
+   - If no address is provided, set to null.
+
+### Additional Notes:
+- If any required information is missing or invalid, respond with an appropriate error message.
+- The JSON response must only include the fields outlined above and must strictly adhere to the schema.
+
+Now, process the user's request and provide your response.
+`;
+
+export const swapTemplate = `Given the recent messages and wallet information below:
+
+{{recentMessages}}
+
+{{walletInfo}}
+
+Extract the following information about the requested token swap:
+- Input token symbol or address (the token being sold)
+- Output token symbol or address (the token being bought)
+- Amount to swap: Must be a string representing the amount in the chain's native units (only number without coin symbol, e.g., "100")
+- Chain to execute on
+- Slippage tolerance (optional, default is 0.5% if not specified)
+
+Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined:
+
+\`\`\`json
+{
+    "inputToken": string | null,
+    "outputToken": string | null,
+    "amount": string | null,
+    "chain": "ethereum" | "abstract" | "base" | "sepolia" | "bsc" | "arbitrum" | "avalanche" | "polygon" | "optimism" | "cronos" | "gnosis" | "fantom" | "klaytn" | "celo" | "moonbeam" | "aurora" | "harmonyOne" | "moonriver" | "arbitrumNova" | "mantle" | "linea" | "scroll" | "filecoin" | "taiko" | "zksync" | "canto" | "alienx" | "tron" | "ton" | null,
+    "slippage": number | null
+}
+\`\`\`
+
+**Validation Details**:
+1. **Chain**:
+   - Ensure the chain is listed in the supported chains.
+   - For TRON, ensure the input/output tokens are valid TRON addresses or token symbols.
+   - For TON, ensure the input/output tokens are valid TON asset addresses or symbols.
+
+2. **Amount**:
+   - Verify the amount is a valid numeric string.
+   - Convert to the chain's native decimal precision as required (e.g., TRON uses 6 decimals, TON uses 9 decimals).
+
+3. **Input and Output Tokens**:
+   - Validate token addresses or symbols:
+     - For TRON, Base58 or known token symbols.
+     - For TON, valid TON asset addresses or standard user-friendly symbols.
+   - Set to null if tokens are not specified.
+
+4. **Slippage**:
+   - If the user does not specify, use the default value of 0.5%.
+
+**Example Scenarios**:
+1. User says, "Swap 50 USDT to TRX on TRON":
+   - Input token: "USDT"
+   - Output token: "TRX"
+   - Amount: "50"
+   - Chain: "tron"
+   - Slippage: null (default will apply)
+
+2. User says, "Swap 2 TON to USDC on TON with 1% slippage":
+   - Input token: "TON"
+   - Output token: "USDC"
+   - Amount: "2"
+   - Chain: "ton"
+   - Slippage: 1
+
+Now, process the user's request and provide the JSON response.`;
