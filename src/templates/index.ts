@@ -70,7 +70,6 @@ export const bridgeTemplate = `Given the recent messages and wallet information 
 
 Extract the following information about the requested token bridge:
 - Token symbol or address to bridge
-- Source chain
 - Destination chain
 - Amount to bridge: Must be a string representing the amount in the chain's native units (only number without coin symbol, e.g., "0.1")
 - Destination address (if specified)
@@ -80,7 +79,6 @@ Respond with a JSON markdown block containing only the extracted values:
 \`\`\`json
 {
     "token": string | null,
-    "fromChain": "ethereum" | "abstract" | "base" | "sepolia" | "bsc" | "arbitrum" | "avalanche" | "polygon" | "optimism" | "cronos" | "gnosis" | "fantom" | "klaytn" | "celo" | "moonbeam" | "aurora" | "harmonyOne" | "moonriver" | "arbitrumNova" | "mantle" | "linea" | "scroll" | "filecoin" | "taiko" | "zksync" | "canto" | "alienx" | "tron" | "ton" | null,
     "toChain": "ethereum" | "abstract" | "base" | "sepolia" | "bsc" | "arbitrum" | "avalanche" | "polygon" | "optimism" | "cronos" | "gnosis" | "fantom" | "klaytn" | "celo" | "moonbeam" | "aurora" | "harmonyOne" | "moonriver" | "arbitrumNova" | "mantle" | "linea" | "scroll" | "filecoin" | "taiko" | "zksync" | "canto" | "alienx" | "tron" | "ton" | null,
     "amount": string | null,
     "toAddress": string | null
@@ -89,7 +87,7 @@ Respond with a JSON markdown block containing only the extracted values:
 
 ### Validation Steps:
 1. **Token**: Identify the token symbol or address mentioned by the user. Set to null if no specific token is mentioned.
-2. **Source and Destination Chains**:
+2. **Destination Chains**:
    - Must exactly match one of the supported chains listed above.
    - If the chain is not explicitly stated, infer it based on wallet information or previous context in the conversation.
 3. **Amount**:

@@ -75,12 +75,12 @@ export interface SwapParams {
 }
 
 export interface BridgeParams {
-    fromChain: SupportedChain;
     toChain: SupportedChain;
     fromToken: string;
     toToken: string;
     amount: string;
     toAddress?: string;
+    slippage?: number;
 }
 
 // Plugin configuration
