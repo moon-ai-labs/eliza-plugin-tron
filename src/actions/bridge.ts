@@ -68,8 +68,8 @@ export const bridgeAction = {
         runtime: IAgentRuntime,
         _message: Memory,
         state: State,
-        _options: any,
-        callback?: any
+        _options,
+        callback?
     ) => {
         console.log("Bridge action handler called");
         const walletProvider = await initWalletProvider(runtime);

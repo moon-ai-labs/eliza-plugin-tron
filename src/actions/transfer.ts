@@ -8,10 +8,11 @@ import {
     type Memory,
     type State,
 } from "@elizaos/core";
+import { BigNumber } from "tronweb";
 
 import { initWalletProvider, WalletProvider } from "../providers/wallet";
-import type { Transaction, TransferParams } from "../types";
 import { transferTemplate } from "../templates";
+import type { Transaction, TransferParams } from "../types";
 
 // Exported for tests
 export class TransferAction {
@@ -29,11 +30,7 @@ export class TransferAction {
         const tronWeb = this.walletProvider.tronWeb;
 
         try {
-            const sunAmount = tronWeb.toSun(+params.amount);
-            const amount =
-                typeof sunAmount === "string"
-                    ? parseFloat(sunAmount)
-                    : sunAmount.toNumber();
+            const amount = BigNumber(tronWeb.toSun(+params.amount)).toNumber();
             const transaction = await tronWeb.transactionBuilder.sendTrx(
                 params.toAddress,
                 amount

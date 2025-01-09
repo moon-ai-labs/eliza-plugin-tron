@@ -129,28 +129,22 @@ Respond with a JSON markdown block containing only the extracted values. Use nul
     "inputToken": string | null,
     "outputToken": string | null,
     "amount": string | null,
-    "chain": "ethereum" | "abstract" | "base" | "sepolia" | "bsc" | "arbitrum" | "avalanche" | "polygon" | "optimism" | "cronos" | "gnosis" | "fantom" | "klaytn" | "celo" | "moonbeam" | "aurora" | "harmonyOne" | "moonriver" | "arbitrumNova" | "mantle" | "linea" | "scroll" | "filecoin" | "taiko" | "zksync" | "canto" | "alienx" | "tron" | "ton" | null,
     "slippage": number | null
 }
 \`\`\`
 
 **Validation Details**:
-1. **Chain**:
-   - Ensure the chain is listed in the supported chains.
-   - For TRON, ensure the input/output tokens are valid TRON addresses or token symbols.
-   - For TON, ensure the input/output tokens are valid TON asset addresses or symbols.
-
-2. **Amount**:
+1. **Amount**:
    - Verify the amount is a valid numeric string.
    - Convert to the chain's native decimal precision as required (e.g., TRON uses 6 decimals, TON uses 9 decimals).
 
-3. **Input and Output Tokens**:
+2. **Input and Output Tokens**:
    - Validate token addresses or symbols:
      - For TRON, Base58 or known token symbols.
      - For TON, valid TON asset addresses or standard user-friendly symbols.
    - Set to null if tokens are not specified.
 
-4. **Slippage**:
+3. **Slippage**:
    - If the user does not specify, use the default value of 0.5%.
 
 **Example Scenarios**:
@@ -158,14 +152,12 @@ Respond with a JSON markdown block containing only the extracted values. Use nul
    - Input token: "USDT"
    - Output token: "TRX"
    - Amount: "50"
-   - Chain: "tron"
    - Slippage: null (default will apply)
 
-2. User says, "Swap 2 TON to USDC on TON with 1% slippage":
-   - Input token: "TON"
+2. User says, "Swap 2 TRX to USDC with 1% slippage":
+   - Input token: null
    - Output token: "USDC"
    - Amount: "2"
-   - Chain: "ton"
-   - Slippage: 1
+   - Slippage: 0.01
 
 Now, process the user's request and provide the JSON response.`;

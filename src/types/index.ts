@@ -68,7 +68,6 @@ export interface TransferParams {
 }
 
 export interface SwapParams {
-    chain: SupportedChain;
     fromToken: string;
     toToken: string;
     amount: string;

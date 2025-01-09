@@ -7,14 +7,21 @@ import {
     elizaLogger,
 } from "@elizaos/core";
 import { TEEMode } from "@elizaos/plugin-tee";
+import { createConfig, ExtendedChain, SDKBaseConfig } from "@lifi/sdk";
 import NodeCache from "node-cache";
 import * as path from "path";
-import { TronWeb } from "tronweb";
+import { BigNumber, TronWeb } from "tronweb";
 import * as viemChains from "viem/chains";
-
-import type { SupportedChain } from "../types";
-import { createConfig, ExtendedChain, SDKBaseConfig } from "@lifi/sdk";
 import { Chain, tron } from "viem/chains";
+
+import trc10Abi from "../abis/trc10.json";
+import wtrxAbi from "../abis/wtrx.json";
+import type { SupportedChain } from "../types";
+import {
+    SWAP_FEE_LIMIT as FEE_LIMIT,
+    WRAP_FEE_LIMIT,
+    WRAPPED_TRX_ADDRESS,
+} from "../constants";
 
 export class WalletProvider {
     private cache: NodeCache;
@@ -68,6 +75,36 @@ export class WalletProvider {
             console.error("Error getting wallet balance:", error);
             return null;
         }
+    }
+
+    async fetchOnchainToken(address: string) {
+        const token = this.tronWeb.contract(trc10Abi, address);
+        const name = await token["name"]().call();
+        const symbol = await token["symbol"]().call();
+        const decimals = await token["decimals"]().call();
+        return { name, symbol, decimals };
+    }
+
+    async wrapTrx(amount: bigint) {
+        const wtrx = this.tronWeb.contract(wtrxAbi, WRAPPED_TRX_ADDRESS);
+        const result = await wtrx.deposit().send({
+            feeLimit: WRAP_FEE_LIMIT,
+            callValue: BigNumber(amount.toString()).toNumber(),
+        });
+        return result;
+    }
+
+    async approve(address: string, spender: string, allowance: bigint) {
+        const token = this.tronWeb.contract(trc10Abi, address);
+        return await token.methods.approve(spender, allowance).send({
+            feeLimit: FEE_LIMIT,
+            callValue: 0,
+        });
+    }
+
+    async allowance(address: string, owner: string, spender: string) {
+        const token = this.tronWeb.contract(trc10Abi, address);
+        return await token["allowance"](owner, spender).call();
     }
 
     private async readFromCache<T>(key: string): Promise<T | null> {

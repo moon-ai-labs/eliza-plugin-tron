@@ -1,10 +1,23 @@
-import type { IAgentRuntime, Memory, State } from "@elizaos/core";
 import {
     composeContext,
+    elizaLogger,
     generateObjectDeprecated,
     ModelClass,
+    type IAgentRuntime,
+    type Memory,
+    type State,
 } from "@elizaos/core";
+import { BigNumber } from "tronweb";
+import factoryAbi from "../abis/sunswap_v2_factory.json";
+import pairAbi from "../abis/sunswap_v2_pair.json";
+import routerAbi from "../abis/sunswap_v2_router.json";
 
+import {
+    SUNSWAPV2_FACTORY,
+    SUNSWAPV2_ROUTER,
+    SWAP_FEE_LIMIT,
+    WRAPPED_TRX_ADDRESS,
+} from "../constants";
 import { initWalletProvider, WalletProvider } from "../providers/wallet";
 import { swapTemplate } from "../templates";
 import type { SwapParams, Transaction } from "../types";
@@ -18,61 +31,143 @@ export class SwapAction {
         const tronWeb = this.walletProvider.tronWeb;
         const fromAddress = tronWeb.defaultAddress.base58;
 
-        const chainConfig = this.walletProvider.getChainConfigs(params.chain);
+        const fromAmount = new BigNumber(
+            tronWeb.toSun(parseFloat(params.amount))
+        ).toNumber();
 
-        if (!chainConfig) {
-            throw new Error(`Unsupported chain: ${params.chain}`);
+        const router = tronWeb.contract(routerAbi, SUNSWAPV2_ROUTER);
+        const deadline = Date.now() + 60000;
+
+        elizaLogger.log(
+            `Performing swap on TRON\nFrom: ${params.fromToken}\nTo: ${params.toToken}\nAmount: ${params.amount} (${fromAmount})`
+        );
+        if (!fromAddress) {
+            throw new Error("No address found");
         }
 
-        const fromAmountSun = tronWeb.toSun(parseFloat(params.amount));
+        if (!params.fromToken) {
+            params.fromToken = WRAPPED_TRX_ADDRESS;
+        }
 
-        try {
-            // Simulate token swap logic
-            console.log(
-                `Performing swap on chain: ${params.chain}\nFrom: ${params.fromToken}\nTo: ${params.toToken}\nAmount: ${params.amount} (${fromAmountSun} SUN)`
+        const minAmountOut = await this.getAmountOut(
+            fromAmount,
+            params.fromToken,
+            params.toToken,
+            params.slippage
+        );
+
+        let hash;
+        if (params.fromToken === WRAPPED_TRX_ADDRESS) {
+            hash = await router.methods
+                .swapExactETHForTokens(
+                    minAmountOut,
+                    [params.fromToken, params.toToken],
+                    fromAddress,
+                    deadline
+                )
+                .send({
+                    feeLimit: SWAP_FEE_LIMIT,
+                    callValue: fromAmount,
+                });
+        } else {
+            const tokenAllowance = await this.walletProvider.allowance(
+                params.fromToken,
+                fromAddress,
+                SUNSWAPV2_ROUTER
             );
-            if (!fromAddress) {
-                throw new Error("No address found");
-            }
-            // This is placeholder logic for interacting with Tron-specific DEX or smart contract.
-            const transaction =
-                await tronWeb.transactionBuilder.triggerSmartContract(
-                    params.fromToken, // Example contract address for token
-                    "swap", // Example contract method name
-                    {
-                        feeLimit: 10000000, // Example fee limit
-                    },
-                    [
-                        {
-                            type: "address",
-                            value: params.toToken,
-                        },
-                        {
-                            type: "uint256",
-                            value: fromAmountSun,
-                        },
-                    ],
-                    fromAddress
+            if (tokenAllowance < fromAmount) {
+                await this.walletProvider.approve(
+                    params.fromToken,
+                    SUNSWAPV2_ROUTER,
+                    BigInt(fromAmount)
                 );
-
-            const signedTransaction = await tronWeb.trx.sign(
-                transaction.transaction
-            );
-            const result = await tronWeb.trx.sendRawTransaction(
-                signedTransaction
-            );
-
-            return {
-                hash: result.transaction.txID,
-                from: fromAddress,
-                to: params.toToken,
-                value: BigInt(fromAmountSun.toString()),
-                data: JSON.stringify(transaction),
-                chainId: chainConfig.id,
-            };
-        } catch (error) {
-            throw new Error(`Swap failed: ${error.message}`);
+            }
+            if (params.toToken === WRAPPED_TRX_ADDRESS) {
+                hash = await router.methods
+                    .swapExactTokensForETH(
+                        fromAmount,
+                        minAmountOut,
+                        [params.fromToken, params.toToken],
+                        fromAddress,
+                        deadline
+                    )
+                    .send({
+                        feeLimit: SWAP_FEE_LIMIT,
+                        callValue: 0,
+                    });
+            } else {
+                hash = await router.methods
+                    .swapExactTokensForTokens(
+                        fromAmount,
+                        minAmountOut,
+                        [params.fromToken, params.toToken],
+                        fromAddress,
+                        deadline
+                    )
+                    .send({
+                        feeLimit: SWAP_FEE_LIMIT,
+                        callValue: 0,
+                    });
+            }
         }
+
+        return {
+            hash,
+            from: fromAddress,
+            to: params.toToken,
+            value: BigInt(fromAmount.toString()),
+        };
+    }
+
+    private async findSwapPair(fromToken: string, toToken: string) {
+        const factory = this.walletProvider.tronWeb.contract(
+            factoryAbi,
+            SUNSWAPV2_FACTORY
+        );
+
+        const pair = await factory.methods.getPair(fromToken, toToken).call();
+
+        return pair.toString();
+    }
+
+    private async getPairReserves(pair: string) {
+        const pairContract = this.walletProvider.tronWeb.contract(
+            pairAbi,
+            pair
+        );
+
+        const reserves = await pairContract.methods.getReserves().call();
+
+        if (!reserves) {
+            throw new Error("No reserves found");
+        }
+        const [reserve0, reserve1] = reserves;
+
+        return {
+            reserve0: reserve0,
+            reserve1: reserve1,
+        };
+    }
+
+    private async getAmountOut(
+        fromAmount: number,
+        fromToken: string,
+        toToken: string,
+        slippage = 0.05
+    ) {
+        const pair = await this.findSwapPair(fromToken, toToken);
+
+        const { reserve0, reserve1 } = await this.getPairReserves(pair);
+
+        const router = this.walletProvider.tronWeb.contract(
+            routerAbi,
+            SUNSWAPV2_ROUTER
+        );
+        const [amountOut] = await router.methods
+            .getAmountOut(fromAmount, reserve0, reserve1)
+            .call();
+
+        return new BigNumber(amountOut).multipliedBy(1 - slippage).toFixed(0);
     }
 }
 
@@ -83,10 +178,10 @@ export const swapAction = {
         runtime: IAgentRuntime,
         _message: Memory,
         state: State,
-        _options: any,
-        callback?: any
+        _options,
+        callback?
     ) => {
-        console.log("Swap action handler called");
+        elizaLogger.log("Swap action handler called");
         const walletProvider = await initWalletProvider(runtime);
         const action = new SwapAction(walletProvider);
 
@@ -102,7 +197,6 @@ export const swapAction = {
         });
 
         const swapOptions: SwapParams = {
-            chain: content.chain,
             fromToken: content.inputToken,
             toToken: content.outputToken,
             amount: content.amount,
@@ -118,13 +212,12 @@ export const swapAction = {
                         success: true,
                         hash: swapResp.hash,
                         recipient: swapResp.to,
-                        chain: content.chain,
                     },
                 });
             }
             return true;
         } catch (error) {
-            console.error("Error in swap handler:", error.message);
+            console.error("Error in swap handler:", error);
             if (callback) {
                 callback({ text: `Error: ${error.message}` });
             }
