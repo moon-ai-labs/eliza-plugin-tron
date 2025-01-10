@@ -1,21 +1,19 @@
-# eliza-plugin-tron
+# @eliza-plugin-tron
 
-This plugin provides actions and providers for interacting with TRON blockchain.
+Core Tron blockchain plugin for Eliza OS that provides essential services and actions for token operations, trading, and DeFi integrations.
 
 ## Description
 
-The TRON plugin provides comprehensive functionality for interacting with TRON blockchain, including token transfers, cross-chain bridging, and token swaps using LiFi integration.
+The TRON plugin provides comprehensive functionality for interacting with TRON blockchain, including token transfers, cross-chain bridging, and token swaps using Symbiosis integration.
 
 ## Features
 
--   Multi-chain support with dynamic chain configuration
 -   Native token transfers
--   Cross-chain token bridging via LiFi
--   Token swapping on supported DEXs
+-   Cross-chain token bridging via Symbiosis
+-   Token swapping on Sunswap
 -   Wallet balance tracking
 -   Custom RPC endpoint configuration
 -   Automatic retry mechanisms
--   Comprehensive transaction management
 
 ## Installation
 
@@ -63,26 +61,58 @@ The **Wallet Provider** initializes with the **TRON**. It:
 Transfer native tokens on the same chain:
 
 ```typescript
-// Example: Transfer 1 TRX
-Send 100 TRX  to TH9husb1dF7q8KSe7PVdmZYKqfnuYw5KWL
+// Example transfer 100 TRX from the connected address to another address
+const message: Memory = {
+    content: {
+        text: "Send 100 TRX  to TH9husb1dF7q8KSe7PVdmZYKqfnuYw5KWL",
+        action: transferAction.name,
+    },
+    agentId: runtime.agentId,
+    userId: stringToUuid("test"),
+    roomId: stringToUuid("test"),
+};
+
+const state = await runtime.composeState(message);
+const result = await runtime.processActions(message, [message], state);
 ```
 
 ### 2. Bridge
 
-Bridge tokens between different chains using LiFi:
+Bridge tokens between different chains using Symbiosis:
 
 ```typescript
-// Example: Bridge TRX from TRON to Base
-Bridge 1 TRX from TRON to Base
+// Example Bridge 10 USDC from TRON to ETH
+const message: Memory = {
+    content: {
+        text: "Bridge 10 USDC from TRON to ETHEREUM",
+        action: bridgeAction.name,
+    },
+    agentId: runtime.agentId,
+    userId: stringToUuid("test"),
+    roomId: stringToUuid("test"),
+};
+const state = await runtime.composeState(message);
+const result = await runtime.processActions(message, [message], state);
 ```
 
 ### 3. Swap
 
-Swap tokens on the same chain using LiFi:
+Swap tokens on the same chain using SunSwap:
 
 ```typescript
-// Example: Swap TRX for USDC
-Swap 1 TRX for USDC on TRON
+// Example: Swap 10 TRX for USDT on TRON
+const message: Memory = {
+    content: {
+        text: "Swap 10 TRX to USDT",
+        action: swapAction.name,
+    },
+    agentId: runtime.agentId,
+    userId: stringToUuid("test"),
+    roomId: stringToUuid("test"),
+};
+
+const state = await runtime.composeState(message);
+const result = await runtime.processActions(message, [message], state);
 ```
 
 ## Development
@@ -113,7 +143,6 @@ yarn test
 1. **WalletProvider**
 
     - Manages wallet connections
-    - Handles chain switching
     - Manages RPC endpoints
     - Tracks balances
 
@@ -121,86 +150,3 @@ yarn test
     - TransferAction: Native token transfers
     - BridgeAction: Cross-chain transfers
     - SwapAction: Same-chain token swaps
-
-## Future Enhancements
-
-1. **Cross-Chain Operations**
-
-    - Enhanced bridge aggregation
-    - Multi-chain transaction batching
-    - Cross-chain liquidity management
-    - Bridge fee optimization
-    - Chain-specific gas strategies
-    - Cross-chain messaging
-
-2. **DeFi Integration**
-
-    - Advanced swap routing
-    - Yield farming automation
-    - Liquidity pool management
-    - Position management tools
-    - MEV protection features
-    - Flash loan integration
-
-3. **Smart Contract Management**
-
-    - Contract deployment templates
-    - Verification automation
-    - Upgrade management
-    - Security analysis tools
-    - Gas optimization
-    - ABI management system
-
-4. **Token Operations**
-
-    - Batch transfer tools
-    - Token approval management
-    - Token metadata handling
-    - Custom token standards
-    - Token bridging optimization
-    - NFT support enhancement
-
-5. **Wallet Features**
-
-    - Multi-signature support
-    - Account abstraction
-    - Hardware wallet integration
-    - Social recovery options
-    - Transaction simulation
-    - Batch transaction processing
-
-6. **Network Management**
-
-    - Dynamic RPC management
-    - Network health monitoring
-    - Fallback provider system
-    - Custom network addition
-    - Gas price optimization
-    - Network analytics
-
-7. **Security Enhancements**
-
-    - Transaction validation
-    - Risk assessment tools
-    - Fraud detection
-    - Rate limiting
-    - Emergency shutdown
-    - Audit integration
-
-8. **Developer Tools**
-    - Enhanced debugging
-    - Testing framework
-    - Documentation generator
-    - CLI improvements
-    - Performance profiling
-    - Integration templates
-
-We welcome community feedback and contributions to help prioritize these enhancements.
-
-## Contributing
-
-The plugin contains tests. WhTRXer you're using **TDD** or not, please make sure to run the tests before submitting a PR:
-
-```bash
-yarn test
-```
