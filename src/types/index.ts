@@ -64,7 +64,7 @@ export interface ChainConfig {
 export interface TransferParams {
     toAddress: string;
     amount: string;
-    data?: string;
+    token?: string;
 }
 
 export interface SwapParams {

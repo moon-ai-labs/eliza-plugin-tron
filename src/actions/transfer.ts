@@ -20,34 +20,55 @@ export class TransferAction {
 
     async transfer(params: TransferParams): Promise<Transaction> {
         console.log(
-            `Transferring: ${params.amount} TRX to (${params.toAddress})`
+            `Transferring: ${params.amount} ${
+                params.token ? "TRC20 token" : "TRX"
+            } to (${params.toAddress})`
         );
-
-        if (!params.data) {
-            params.data = "";
-        }
 
         const tronWeb = this.walletProvider.tronWeb;
 
         try {
-            const amount = BigNumber(tronWeb.toSun(+params.amount)).toNumber();
-            const transaction = await tronWeb.transactionBuilder.sendTrx(
-                params.toAddress,
-                amount
-                // tronWeb.defaultAddress.base58
-            );
-            const signedTransaction = await tronWeb.trx.sign(transaction);
-            const result = await tronWeb.trx.sendRawTransaction(
-                signedTransaction
-            );
-
-            return {
-                hash: result.transaction.txID,
-                from: tronWeb.defaultAddress.base58 || "",
-                to: params.toAddress,
-                value: BigInt(params.amount),
-                data: params.data,
-            };
+            if (params.token) {
+                // Transfer TRC20 token
+                const { abi } = await tronWeb.trx.getContract(params.token);
+                const tokenContract = tronWeb.contract(
+                    abi.entrys,
+                    params.token
+                );
+                const amount = BigNumber(
+                    tronWeb.toSun(+params.amount)
+                ).toNumber();
+                const transaction = await tokenContract.methods
+                    .transfer(params.toAddress, amount)
+                    .send();
+                return {
+                    hash: transaction,
+                    from: tronWeb.defaultAddress.base58 || "",
+                    to: params.toAddress,
+                    value: BigInt(params.amount),
+                    data: params.token,
+                };
+            } else {
+                // Transfer TRX
+                const amount = BigNumber(
+                    tronWeb.toSun(+params.amount)
+                ).toNumber();
+                const transaction = await tronWeb.transactionBuilder.sendTrx(
+                    params.toAddress,
+                    amount
+                );
+                const signedTransaction = await tronWeb.trx.sign(transaction);
+                const result = await tronWeb.trx.sendRawTransaction(
+                    signedTransaction
+                );
+                return {
+                    hash: result.transaction.txID,
+                    from: tronWeb.defaultAddress.base58 || "",
+                    to: params.toAddress,
+                    value: BigInt(params.amount),
+                    data: params.token,
+                };
+            }
         } catch (error) {
             throw new Error(`Transfer failed: ${error.message}`);
         }
