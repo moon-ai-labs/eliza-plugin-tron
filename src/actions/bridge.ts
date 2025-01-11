@@ -8,10 +8,16 @@ import {
     type State,
 } from "@elizaos/core";
 import { getToken } from "@lifi/sdk";
-import { Symbiosis, Token, TokenAmount } from "symbiosis-js-sdk";
+import axios, { AxiosError } from "axios";
 import { parseUnits } from "viem";
 import { tron } from "viem/chains";
-import { WRAPPED_TRX_ADDRESS } from "../constants";
+import { SYMBIOSIS_API, WRAPPED_TRX_ADDRESS } from "../constants";
+import {
+    SymbiosisSwapRequest,
+    SymbiosisSwapResponse,
+    SymbiosisToken,
+    SymbiosisTokenIn,
+} from "../interfaces/symbiosis";
 import { initWalletProvider, WalletProvider } from "../providers/wallet";
 import { bridgeTemplate } from "../templates";
 import type { BridgeParams, Transaction } from "../types";
@@ -19,11 +25,7 @@ import type { BridgeParams, Transaction } from "../types";
 export { bridgeTemplate };
 
 export class BridgeAction {
-    private symbiosis: Symbiosis;
-
-    constructor(private walletProvider: WalletProvider) {
-        this.symbiosis = new Symbiosis("mainnet", "sdk-example-app");
-    }
+    constructor(private walletProvider: WalletProvider) {}
 
     async bridge(params: BridgeParams): Promise<Transaction> {
         const toChainConfig = this.walletProvider.getChainConfigs(
@@ -35,35 +37,40 @@ export class BridgeAction {
         );
 
         const toTokenInfo = await getToken(toChainConfig.id, params.toToken);
+        fromTokenInfo.decimals = fromTokenInfo.decimals.toString();
+        const fromAmount = parseUnits(
+            params.amount,
+            fromTokenInfo.decimals.toString()
+        );
 
-        const fromToken = new Token({
+        const fromToken: SymbiosisTokenIn = {
             address: params.fromToken,
             chainId: tron.id,
-            decimals: fromTokenInfo.decimals.toString(),
-        });
+            decimals: parseInt(fromTokenInfo.decimals),
+            amount: fromAmount.toString(),
+            symbol: fromTokenInfo.symbol,
+        };
 
-        const toToken = new Token({
+        const toToken: SymbiosisToken = {
             address: params.toToken,
             chainId: toChainConfig.id,
             decimals: toTokenInfo.decimals,
-        });
+            symbol: toTokenInfo.symbol,
+        };
 
-        const fromAmount = parseUnits(params.amount, fromToken.decimals);
-        const tokenAmountIn = new TokenAmount(fromToken, fromAmount);
         const senderAddress = this.walletProvider.getAddress();
 
-        const result = await this.symbiosis.swapExactIn({
-            deadline: Date.now() + 20 * 60,
-            from: senderAddress,
-            to: params.toAddress,
-            slippage: 300, //3%
-            tokenAmountIn: tokenAmountIn,
+        const result = await this.getSwapTransaction({
             tokenOut: toToken,
+            tokenAmountIn: fromToken,
+            to: params.toAddress,
+            from: senderAddress,
+            slippage: params.slippage || 300,
         });
 
-        const { transactionRequest, approveTo, transactionType } = result;
+        const { tx, approveTo, type } = result;
 
-        if (transactionType !== "tron") {
+        if (type !== "tron") {
             throw new Error("This Action only supports TRON wallets.");
         }
 
@@ -71,37 +78,28 @@ export class BridgeAction {
             params.fromToken = WRAPPED_TRX_ADDRESS;
         }
 
-        // Approve the token transfer if necessary
-        if (params.fromToken !== WRAPPED_TRX_ADDRESS) {
-            await this.walletProvider.approve(
-                params.fromToken,
-                approveTo,
-                fromAmount
-            );
-        }
+        // Approve the token
+        await this.walletProvider.approve(
+            params.fromToken,
+            approveTo,
+            fromAmount
+        );
 
-        const {
-            call_value,
-            contract_address,
-            fee_limit,
-            function_selector,
-            owner_address,
-            raw_parameter,
-        } = transactionRequest;
+        const { data, feeLimit, from, functionSelector, to, value } = tx;
 
         const tronWeb = this.walletProvider.tronWeb;
 
         const triggerResult =
             await tronWeb.transactionBuilder.triggerSmartContract(
-                contract_address,
-                function_selector,
+                to,
+                functionSelector,
                 {
-                    rawParameter: raw_parameter,
-                    callValue: Number(call_value),
-                    feeLimit: fee_limit,
+                    rawParameter: data,
+                    callValue: Number(value),
+                    feeLimit: feeLimit,
                 },
                 [],
-                owner_address
+                from
             );
 
         const signedTx = await tronWeb.trx.sign(triggerResult.transaction);
@@ -113,6 +111,27 @@ export class BridgeAction {
             to: params.toAddress,
             value: BigInt(params.amount),
         };
+    }
+
+    private async getSwapTransaction(request: SymbiosisSwapRequest) {
+        try {
+            const result = await axios.post<SymbiosisSwapResponse>(
+                SYMBIOSIS_API,
+                request
+            );
+
+            return result.data;
+        } catch (error) {
+            if (error instanceof AxiosError) {
+                if (error.response) {
+                    console.error("error.response", error.response.data);
+
+                    throw new Error(error.response.data);
+                }
+            }
+
+            throw error;
+        }
     }
 }
 
@@ -147,7 +166,7 @@ export const bridgeAction = {
             toToken: content.token,
             toAddress: content.toAddress,
             amount: content.amount,
-            slippage: content.slippage || 0.5,
+            slippage: content.slippage || 300,
         };
 
         try {

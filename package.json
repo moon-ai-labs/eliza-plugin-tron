@@ -1,8 +1,8 @@
 {
-  "name": "eliza-plugin-tron",
+  "name": "eliza-tron-plugin",
   "version": "0.0.1",
   "repository": {
-    "url": "https://github.com/moon-ai-labs/eliza-plugin-tron"
+    "url": "https://github.com/moon-ai-labs/eliza-tron-plugin"
   },
   "author": {
     "name": "moon-ai-labs"
@@ -27,19 +27,14 @@
   "dependencies": {
     "@elizaos/core": "^0.1.7",
     "@elizaos/plugin-tee": "^0.1.7",
-    "@ethersproject/contracts": "^5.7.0",
-    "@ethersproject/providers": "^5.7.2",
-    "@ethersproject/solidity": "^5.7.0",
-    "@ethersproject/units": "^5.7.0",
     "@langchain/core": "^0.3.27",
     "@lifi/data-types": "5.15.5",
     "@lifi/sdk": "3.4.1",
     "@lifi/types": "16.3.0",
     "@noble/secp256k1": "^2.2.3",
+    "axios": "^1.7.9",
     "dotenv": "^16.4.7",
-    "ethers": "5",
     "sharp": "0.33.5",
-    "symbiosis-js-sdk": "^3.4.39",
     "tronweb": "^6.0.0",
     "tsup": "8.3.5"
   },
