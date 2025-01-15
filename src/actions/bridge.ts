@@ -200,7 +200,7 @@ export const bridgeAction = {
             {
                 user: "user",
                 content: {
-                    text: "Bridge 1 TRX from TRON to ETHEREUM",
+                    text: "Bridge 10 USDT (TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t) on TRON to USDC (0xdAC17F958D2ee523a2206206994597C13D831ec7) on Ethereum Mainnet to the address: 0xE11F5d4835B1EAe5E73Be3B516AC8a9A70Be5091",
                     action: "CROSS_CHAIN_TRANSFER",
                 },
             },

@@ -234,7 +234,7 @@ export const swapAction = {
             {
                 user: "user",
                 content: {
-                    text: "Swap 1 TRX for USDT on Tron",
+                    text: "Swap 10 TRX to MOON (TJWbDxjh6WeWAFVUGrNx4vMa6YgJnTFNEf)",
                     action: "TOKEN_SWAP",
                 },
             },
