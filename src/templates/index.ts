@@ -14,7 +14,7 @@ Here's a list of supported chains:
 Your goal is to extract the following information about the requested transfer:
 1. Amount to transfer (in the chain's native units, without the coin symbol)
 2. Recipient address (must be a valid address for the specified chain)
-3. Token symbol or address (if not a native token transfer)
+3. Token address (if not a native token transfer)
 
 Before providing the final JSON output, show your reasoning process inside <analysis> tags. Follow these steps:
 
@@ -42,20 +42,18 @@ The JSON should follow this structure:
 {
     "amount": string,
     "toAddress": string,
-    "data": string | null
+    "token": string | null
 }
 \`\`\`
 
 **Validation Details**:
 - **Amount**: Must be a valid numeric string.
-- **Recipient Address**: 
-  - For TRON: Must be a valid Base58 TRON address.
-  - For TON: Must be a valid TON wallet address (e.g., user-friendly or raw format).
-- **Data**: Set to null for native transfers, or include the token symbol/address if specified.
+- **Recipient Address**: Must be a valid Base58 TRON address.
+- **Token**: Set to null for native transfers, or include the token address if specified.
 
 **Example Scenarios**:
-- If the user says "Transfer 100 TRX to TXXXXXXXXX on TRON", the JSON should reflect TRON chain details and set "token" to null.
-
+- If the user says "Transfer 100 TRX to TXXXXXXXXX", the JSON should reflect TRON chain details and set "token" to null.
+- If the user says "Transfer 100 USDT (TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t) to TXXXXXXXXX", the JSON should reflect TRON chain details and set "token" to "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t".
 Now, process the user's request and provide your response.`;
 
 export const bridgeTemplate = `Given the recent messages and wallet information below:
@@ -69,7 +67,7 @@ export const bridgeTemplate = `Given the recent messages and wallet information 
 </wallet_info>
 
 Extract the following information about the requested token bridge:
-- Token symbol or address to bridge
+- Token address to bridge
 - Destination chain
 - Amount to bridge: Must be a string representing the amount in the chain's native units (only number without coin symbol, e.g., "0.1")
 - Destination address (if specified)
@@ -86,7 +84,7 @@ Respond with a JSON markdown block containing only the extracted values:
 \`\`\`
 
 ### Validation Steps:
-1. **Token**: Identify the token symbol or address mentioned by the user. Set to null if no specific token is mentioned.
+1. **Token**: Identify the token address mentioned by the user. Set to null if no specific token is mentioned.
 2. **Destination Chains**:
    - Must exactly match one of the supported chains listed above.
    - If the chain is not explicitly stated, infer it based on wallet information or previous context in the conversation.
@@ -96,8 +94,7 @@ Respond with a JSON markdown block containing only the extracted values:
 4. **Destination Address**:
    - Validate based on the destination chain:
      - **TRON**: Must be a valid Base58 address starting with "T".
-     - **TON**: Must be a valid TON wallet address (user-friendly or raw format).
-     - **Other Chains**: Must be a valid Ethereum-style address (starting with "0x").
+     - **EVM**: Must be a valid Ethereum-style address (starting with "0x").
    - If no address is provided, set to null.
 
 ### Additional Notes:
@@ -114,10 +111,9 @@ export const swapTemplate = `Given the recent messages and wallet information be
 {{walletInfo}}
 
 Extract the following information about the requested token swap:
-- Input token symbol or address (the token being sold)
-- Output token symbol or address (the token being bought)
+- Input token address (the token being sold)
+- Output token address (the token being bought)
 - Amount to swap: Must be a string representing the amount in the chain's native units (only number without coin symbol, e.g., "100")
-- Chain to execute on
 - Slippage tolerance (optional, default is 0.5% if not specified)
 
 Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined:
@@ -134,27 +130,24 @@ Respond with a JSON markdown block containing only the extracted values. Use nul
 **Validation Details**:
 1. **Amount**:
    - Verify the amount is a valid numeric string.
-   - Convert to the chain's native decimal precision as required (e.g., TRON uses 6 decimals, TON uses 9 decimals).
 
 2. **Input and Output Tokens**:
-   - Validate token addresses or symbols:
-     - For TRON, Base58 or known token symbols.
-     - For TON, valid TON asset addresses or standard user-friendly symbols.
+   - Validate token TRON address: Base58.
    - Set to null if tokens are not specified.
 
 3. **Slippage**:
    - If the user does not specify, use the default value of 0.5%.
 
 **Example Scenarios**:
-1. User says, "Swap 50 USDT to TRX on TRON":
-   - Input token: "USDT"
-   - Output token: "TRX"
+1. User says, "Swap 50 TRX to USDT (TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t)":
+   - Input token: null
+   - Output token: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
    - Amount: "50"
    - Slippage: null (default will apply)
 
-2. User says, "Swap 2 TRX to USDC with 1% slippage":
+2. User says, "Swap 2 TRX to USDT (TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t) with 1% slippage":
    - Input token: null
-   - Output token: "USDC"
+   - Output token: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
    - Amount: "2"
    - Slippage: 0.01
 
